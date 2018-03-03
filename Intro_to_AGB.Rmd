@@ -1,0 +1,73 @@
+---
+title: "Introduction to AGB"
+#output: html_notebook
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to AGB}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## A regression example
+
+We consider the following datasets:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+n <- 2000
+d <- 10
+X <- matrix(runif(n*d,-1,1),nrow=n) %>% data.frame()
+Y <- X$X1*X$X2+X$X3^2-X$X4*X$X7+X$X8*X$X10-X$X6^2+rnorm(n,0,sqrt(0.5))
+df <- X
+df$Y <- Y
+```
+
+Most of the parameters of **agb** are similar to parameters in **gbm**:
+
+  * *formula*: description oh the model to be fit.
+  * *data*: a data frame which contains the train and validation dataset.
+  * *nesterov*: TRUE for the Nesterov accelerated gradient, FALSE for standard gradient boosting
+  * *train.fraction*: the first train.fraction * nrows(data) observations are used to fit the model. Other observations define the validation data set to select the number of iterations.
+  * *n.trees*: the total number on trees to fit.
+  * *shrinkage*: the shrinkage parameter of the algorithm.
+  * *new.data*: a test data set.
+  * *distribution*: a character string specifying the loss function. "Gaussian" for $L_2$-boosting, "adaboost" for the exponential loss and "bernoulli" for the logit-boost loss.
+  * *depth.tree*: depth of the tree (stumps by default).
+  * *n.minobsinnode*:	minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight.
+
+We obtain the accelerated gradient boosting with
+```{r message=FALSE, warning=FALSE}
+source("agb_v1.R")
+m1 <- agb(Y~.,data=df[1:1500,],distribution="gaussian",nesterov=TRUE,n.trees=200)
+m1$graph
+```
+
+and the standard gradient boosting machine with
+```{r}
+m2 <- agb(Y~.,data=df[1:1500,],distribution="gaussian",nesterov=FALSE,shrinkage=0.1,n.trees=200)
+m2$graph
+```
+
+## A binary classification example
+
+We consider the spam dataset:
+
+```{r message=FALSE, warning=FALSE}
+library(kernlab)
+data(spam)
+```
+
+For classification problem, **agb** requires 0/1 output
+```{r}
+spam1 <- spam
+spam1$type <- as.numeric(spam1$type)-1
+```
+
+We can run the **adaboost** and **logitboost** accelerated boosting with
+```{r}
+m3 <- agb(type~.,data=spam1,distribution="adaboost",n.trees=300)
+m4 <- agb(type~.,data=spam1,distribution="bernoulli",n.trees=300)
+m3$graph
+m4$graph
+```
+
